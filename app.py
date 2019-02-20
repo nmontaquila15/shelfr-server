@@ -35,10 +35,10 @@ def page_not_found(e):
 
 @app.route('/api/v1/resources/books', methods=['GET'])
 def api_filter():
-    query_parameters = request.args
-    id = query_parameters.get('id')
-    published = query_parameters.get('published')
-    author = query_parameters.get('author')
+    query_params = request.args
+    id = query_params.get('id')
+    published = query_params.get('published')
+    author = query_params.get('author')
 
     query = "SELECT * FROM books WHERE"
     to_filter = []
