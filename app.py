@@ -1,68 +1,147 @@
-# import flask
-from flask import Flask, request, jsonify
-import sqlite3
+import pymysql
+from flask import Flask, jsonify, request
+from werkzeug.security import generate_password_hash
+from flaskext.mysql import MySQL
+
+# from app import app
+# from db_config import mysql
+
+mysql = MySQL()
 
 app = Flask(__name__)
 app.config["DEBUG"] = True
 
-
-def dict_factory(cursor, row):
-    d = {}
-    for idx, col in enumerate(cursor.description):
-        d[col[0]] = row[idx]
-    return d
-
-
-@app.route('/', methods=['GET'])
-def home():
-    return '''<h1>Distant Reading Archive</h1>
-<p>A prototype API for distant reading of science fiction novels.</p>'''
+# MySQL configurations
+app.config['MYSQL_DATABASE_USER'] = 'root'
+app.config['MYSQL_DATABASE_PASSWORD'] = 'capstone'
+app.config['MYSQL_DATABASE_DB'] = 'apitest'
+app.config['MYSQL_DATABASE_HOST'] = 'localhost'
+mysql.init_app(app)
 
 
-@app.route('/api/v1/resources/books/all', methods=['GET'])
-def api_all():
-    conn = sqlite3.connect('books.db')
-    conn.row_factory = dict_factory
-    cur = conn.cursor()
-    all_books = cur.execute('SELECT * FROM books;').fetchall()
-    return jsonify(all_books)
+@app.route('/add', methods=['POST'])
+def add_user():
+    try:
+        json = request.json
+        name = json['name']
+        email = json['email']
+        password = json['pwd']
+        # validate the received values
+        if name and email and password and request.method == 'POST':
+            # do not save password as a plain text
+            _hashed_password = generate_password_hash(password)
+            # save edits
+            sql = "INSERT INTO tbl_user(user_name, user_email, user_password) VALUES(%s, %s, %s)"
+            data = (name, email, _hashed_password,)
+            conn = mysql.connect()
+            cursor = conn.cursor()
+            cursor.execute(sql, data)
+            conn.commit()
+            resp = jsonify('User added successfully!')
+            resp.status_code = 200
+            return resp
+        else:
+            return not_found()
+    except Exception as e:
+        print(e)
+    finally:
+        cursor.close()
+        conn.close()
+
+
+@app.route('/users')
+def users():
+    try:
+        conn = mysql.connect()
+        cursor = conn.cursor(pymysql.cursors.DictCursor)
+        cursor.execute("SELECT * FROM tbl_user")
+        rows = cursor.fetchall()
+        resp = jsonify(rows)
+        resp.status_code = 200
+        return resp
+    except Exception as e:
+        print(e)
+    finally:
+        cursor.close()
+        conn.close()
+
+
+@app.route('/user/')
+def user(id):
+    try:
+        conn = mysql.connect()
+        cursor = conn.cursor(pymysql.cursors.DictCursor)
+        cursor.execute("SELECT * FROM tbl_user WHERE user_id=%s", id)
+        row = cursor.fetchone()
+        resp = jsonify(row)
+        resp.status_code = 200
+        return resp
+    except Exception as e:
+        print(e)
+    finally:
+        cursor.close()
+        conn.close()
+
+
+@app.route('/update', methods=['POST'])
+def update_user():
+    try:
+        json = request.json
+        id = json['id']
+        name = json['name']
+        email = json['email']
+        password = json['pwd']
+        # validate the received values
+        if name and email and password and id and request.method == 'POST':
+            # do not save password as a plain text
+            _hashed_password = generate_password_hash(password)
+            # save edits
+            sql = "UPDATE tbl_user SET user_name=%s, user_email=%s, user_password=%s WHERE user_id=%s"
+            data = (name, email, _hashed_password, id,)
+            conn = mysql.connect()
+            cursor = conn.cursor()
+            cursor.execute(sql, data)
+            conn.commit()
+            resp = jsonify('User updated successfully!')
+            resp.status_code = 200
+            return resp
+        else:
+            return not_found()
+    except Exception as e:
+        print(e)
+    finally:
+        cursor.close()
+        conn.close()
+
+
+@app.route('/delete/')
+def delete_user(id):
+    try:
+        conn = mysql.connect()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM tbl_user WHERE user_id=%s", (id,))
+        conn.commit()
+        resp = jsonify('User deleted successfully!')
+        resp.status_code = 200
+        return resp
+    except Exception as e:
+        print(e)
+    finally:
+        cursor.close()
+        conn.close()
 
 
 @app.errorhandler(404)
-def page_not_found(e):
-    return "<h1>404</h1><p>The resource could not be found.</p>", 404
+def not_found(error=None):
+    message = {
+        'status': 404,
+        'message': 'Not Found: ' + request.url,
+    }
+    resp = jsonify(message)
+    resp.status_code = 404
+
+    return resp
 
 
-@app.route('/api/v1/resources/books', methods=['GET'])
-def api_filter():
-    query_params = request.args
-    id = query_params.get('id')
-    published = query_params.get('published')
-    author = query_params.get('author')
-
-    query = "SELECT * FROM books WHERE"
-    to_filter = []
-
-    if id:
-        query += ' id=? AND'
-        to_filter.append(id)
-    if published:
-        query += ' published=? AND'
-        to_filter.append(published)
-    if author:
-        query += ' author=? AND'
-        to_filter.append(author)
-    if not (id or published or author):
-        return page_not_found(404)
-
-    query = query[:-4] + ';'
-
-    conn = sqlite3.connect('books.db')
-    conn.row_factory = dict_factory
-    cur = conn.cursor()
-
-    results = cur.execute(query, to_filter).fetchall()
-    return jsonify(results)
-
-
-app.run()
+if __name__ == "__main__":
+    app.run()
