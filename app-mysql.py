@@ -3,9 +3,6 @@ from flask import Flask, jsonify, request
 from werkzeug.security import generate_password_hash
 from flaskext.mysql import MySQL
 
-# from app import app
-# from db_config import mysql
-
 mysql = MySQL()
 
 app = Flask(__name__)
