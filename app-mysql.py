@@ -12,34 +12,32 @@ app = Flask(__name__)
 app.config["DEBUG"] = True
 
 # MySQL configurations
-app.config['MYSQL_DATABASE_USER'] = 'shelfr'
-app.config['MYSQL_DATABASE_PASSWORD'] = 'shelfr'
-app.config['MYSQL_DATABASE_DB'] = 'inventory'
+app.config['MYSQL_DATABASE_USER'] = 'root'
+app.config['MYSQL_DATABASE_PASSWORD'] = 'capstone'
+app.config['MYSQL_DATABASE_DB'] = 'apitest'
 app.config['MYSQL_DATABASE_HOST'] = 'localhost'
 mysql.init_app(app)
 
 
 @app.route('/add', methods=['POST'])
-def add_item():
+def add_user():
     try:
         json = request.json
-        upc = json['upc']
-        count = json['count']
         name = json['name']
-        weight = json['weight']
-        shelfid = json['shelfid']
-        zone = json['zone']
-        total_weight = json['totalweight']
+        email = json['email']
+        password = json['pwd']
         # validate the received values
-        if upc and count and name and weight and shelfid and zone and total_weight and request.method == 'POST':
+        if name and email and password and request.method == 'POST':
+            # do not save password as a plain text
+            _hashed_password = generate_password_hash(password)
             # save edits
-            sql = "INSERT INTO stock(upc, count, name, weight, shelfid, zone, totalweight) VALUES(%s, %s, %s, %s, %s, %s, %s)"
-            data = (upc, count, name, weight, shelfid, zone, total_weight)
+            sql = "INSERT INTO tbl_user(user_name, user_email, user_password) VALUES(%s, %s, %s)"
+            data = (name, email, _hashed_password,)
             conn = mysql.connect()
             cursor = conn.cursor()
             cursor.execute(sql, data)
             conn.commit()
-            resp = jsonify('Item added successfully!')
+            resp = jsonify('User added successfully!')
             resp.status_code = 200
             return resp
         else:
@@ -51,12 +49,12 @@ def add_item():
         conn.close()
 
 
-@app.route('/items')
-def items():
+@app.route('/users')
+def users():
     try:
         conn = mysql.connect()
         cursor = conn.cursor(pymysql.cursors.DictCursor)
-        cursor.execute("SELECT * FROM stock")
+        cursor.execute("SELECT * FROM tbl_user")
         rows = cursor.fetchall()
         resp = jsonify(rows)
         resp.status_code = 200
@@ -68,12 +66,12 @@ def items():
         conn.close()
 
 
-@app.route('/item/<name>', methods=['GET'])
-def item(name):
+@app.route('/user/<id>')
+def user(id):
     try:
         conn = mysql.connect()
         cursor = conn.cursor(pymysql.cursors.DictCursor)
-        cursor.execute("SELECT * FROM stock WHERE name=%s", name)
+        cursor.execute("SELECT * FROM tbl_user WHERE user_id=%s", id)
         row = cursor.fetchone()
         resp = jsonify(row)
         resp.status_code = 200
@@ -85,24 +83,23 @@ def item(name):
         conn.close()
 
 
-@app.route('/update/<name>', methods=['PUT'])
-def update_item(name):
+@app.route('/update/<id>', methods=['PUT'])
+def update_user(id):
     try:
         json = request.json
-        _name = name
-        upc = json['upc']
-        count = json['count']
-        weight = json['weight']
-        shelfid = json['shelfid']
-        zone = json['zone']
-        total_weight = json['totalweight']
+        _id = id
+        name = json['name']
+        email = json['email']
+        password = json['pwd']
         # validate the received values
-        if _name and upc and count and weight and shelfid and zone and total_weight and request.method == 'PUT':
+        if name and email and password and _id and request.method == 'PUT':
+            # do not save password as a plain text
+            _hashed_password = generate_password_hash(password)
             # save edits
             conn = mysql.connect()
             cursor = conn.cursor()
-            sql = "UPDATE stock SET upc=%s, count=%s, weight=%s, shelfid=%s, zone=%s, totalweight=%s WHERE name=%s"
-            data = (upc, count, weight, shelfid, zone, total_weight, _name)
+            sql = "UPDATE tbl_user SET user_name=%s, user_email=%s, user_password=%s WHERE user_id=%s"
+            data = (name, email, _hashed_password, _id,)
             cursor.execute(sql, data)
             conn.commit()
             resp = jsonify('User updated successfully!')
@@ -117,12 +114,12 @@ def update_item(name):
         conn.close()
 
 
-@app.route('/delete/<name>', methods=['DELETE'])
-def delete_item(name):
+@app.route('/delete/<id>', methods=['DELETE'])
+def delete_user(id):
     try:
         conn = mysql.connect()
         cursor = conn.cursor()
-        cursor.execute("DELETE FROM stock WHERE name=%s", (name))
+        cursor.execute("DELETE FROM tbl_user WHERE user_id=%s", (id))
         conn.commit()
         resp = jsonify('User deleted successfully!')
         resp.status_code = 200
