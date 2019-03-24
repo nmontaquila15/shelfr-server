@@ -6,7 +6,7 @@ from flaskext.mysql import MySQL
 mysql = MySQL()
 
 app = Flask(__name__)
-app.config["DEBUG"] = True
+app.config["DEBUG"] = False
 
 # MySQL configurations
 app.config['MYSQL_DATABASE_USER'] = 'shelfr'
@@ -144,4 +144,4 @@ def not_found(error=None):
 
 
 if __name__ == "__main__":
-    app.run()
+    app.run('0.0.0.0', 5000)
