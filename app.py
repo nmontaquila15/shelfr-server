@@ -6,7 +6,7 @@ from flaskext.mysql import MySQL
 mysql = MySQL()
 
 app = Flask(__name__)
-app.config["DEBUG"] = False
+app.config["DEBUG"] = True
 
 # MySQL configurations
 app.config['MYSQL_DATABASE_USER'] = 'shelfr'
