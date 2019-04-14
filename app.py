@@ -2,6 +2,7 @@ import pymysql
 from flask import Flask, jsonify, request
 from werkzeug.security import generate_password_hash
 from flaskext.mysql import MySQL
+import main
 
 mysql = MySQL()
 
@@ -129,6 +130,12 @@ def delete_item(name):
     finally:
         cursor.close()
         conn.close()
+
+
+@app.route('/alerts')
+def get_alerts():
+    alerts = main.getAlerts()
+    return jsonify(alerts)
 
 
 @app.errorhandler(404)
