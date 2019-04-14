@@ -134,7 +134,7 @@ def delete_item(name):
 
 @app.route('/alerts')
 def get_alerts():
-    alerts = main.getAlerts()
+    alerts = main.returnAlerts()
     return jsonify(alerts)
 
 
